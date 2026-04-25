@@ -1,10 +1,12 @@
 """Component to integrate with Chargeamps."""
 
 import logging
+import secrets
 from datetime import timedelta
 from typing import Optional
 
-from homeassistant.components import webhook
+from aiohttp.web import Response
+from homeassistant.components.http import HomeAssistantView
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_API_KEY,
@@ -12,28 +14,32 @@ from homeassistant.const import (
     CONF_PASSWORD,
     CONF_SCAN_INTERVAL,
     CONF_URL,
-    Platform,
 )
+from homeassistant.components.persistent_notification import async_create as notify_create
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .client import (
     ChargeAmpsClient,
-    ChargePointConnectorStatus,
     ChargePointStatus,
     StartAuth,
 )
 from .const import (
     CONFIGURATION_URL,
+    CONF_WEBHOOK_SECRET,
     DEFAULT_SCAN_INTERVAL,
     DIMMER_VALUES,
     DOMAIN,
     MANUFACTURER,
     PLATFORMS,
+    WEBHOOK_AUTH_HEADER,
 )
 from .coordinator import ChargeAmpsDataUpdateCoordinator
+
+_VIEWS_REGISTERED = "_views_registered"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -80,16 +86,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     # Register services once
     setup_services(hass)
 
-    # Webhook support
-    webhook_id = f"{DOMAIN}_{entry.entry_id}"
-    webhook.async_register(
-        hass,
-        DOMAIN,
-        "Chargeamps Callback",
-        webhook_id,
-        async_handle_webhook,
-    )
-    _LOGGER.info("Registered webhook: %s", webhook_id)
+    # Register HTTP views once — they route by entry_id internally
+    if not hass.data[DOMAIN].get(_VIEWS_REGISTERED):
+        hass.http.register_view(ChargeAmpsCallbackView())
+        hass.http.register_view(ChargeAmpsConnectorCallbackView())
+        hass.data[DOMAIN][_VIEWS_REGISTERED] = True
+
+    try:
+        base_url = get_url(hass, prefer_external=True)
+    except NoURLAvailableError:
+        base_url = "<your-ha-external-url>"
+
+    webhook_base = f"{base_url}/api/chargeamps/{entry.entry_id}"
+
+    # Generate webhook secret on first setup and notify the user
+    if CONF_WEBHOOK_SECRET not in entry.data:
+        secret = secrets.token_hex(32)
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, CONF_WEBHOOK_SECRET: secret}
+        )
+        notify_create(
+            hass,
+            (
+                f"## Charge Amps — Callback / Webhook Setup\n\n"
+                f"To enable real-time updates, contact **Charge Amps support** and "
+                f"provide the following details:\n\n"
+                f"| | |\n"
+                f"|---|---|\n"
+                f"| **Base URL** | `{webhook_base}` |\n"
+                f"| **Auth header key** | `{WEBHOOK_AUTH_HEADER}` |\n"
+                f"| **Auth header value** | `{secret}` |\n\n"
+                f"You can dismiss this notification once you have noted the details. "
+                f"The information is also available under **integration diagnostics**."
+            ),
+            title="Charge Amps Webhook Credentials",
+            notification_id=f"{DOMAIN}_webhook_{entry.entry_id}",
+        )
 
     return True
 
@@ -210,74 +242,110 @@ def setup_services(hass: HomeAssistant) -> None:
         hass.services.async_register(DOMAIN, name, handler)
 
 
-async def async_handle_webhook(hass: HomeAssistant, webhook_id: str, request):
-    """Handle incoming webhook from Charge Amps."""
-    _LOGGER.debug("Received webhook: %s", webhook_id)
-    try:
-        data = await request.json()
-    except Exception:
-        _LOGGER.error("Received invalid JSON in webhook")
-        return None
+def _get_coordinator_for_entry(hass: HomeAssistant, entry_id: str):
+    """Return the coordinator for a given entry_id, or None."""
+    return hass.data.get(DOMAIN, {}).get(entry_id)
 
-    cp_id = data.get("id") or data.get("chargePointId")
-    if not cp_id:
-        _LOGGER.warning("Webhook data missing charge point ID")
-        return None
 
-    target_coordinator = None
-    for coordinator in hass.data[DOMAIN].values():
-        if cp_id in coordinator.data["chargepoints"]:
-            target_coordinator = coordinator
-            break
-    
-    if not target_coordinator:
-        _LOGGER.warning("No coordinator found for charge point %s", cp_id)
-        return None
+def _auth_ok(request, entry) -> bool:
+    """Validate the x-api-key header against the stored webhook secret."""
+    expected = entry.data.get(CONF_WEBHOOK_SECRET)
+    return expected and request.headers.get(WEBHOOK_AUTH_HEADER) == expected
 
-    # Heartbeat callback
-    if "connectorStatuses" in data:
+
+class ChargeAmpsCallbackView(HomeAssistantView):
+    """Handle boot / heartbeat / metervalue callbacks from Charge Amps."""
+
+    url = "/api/chargeamps/{entry_id}/chargepoints/{chargepoint_id}/{event}"
+    name = "api:chargeamps:callback"
+    requires_auth = False
+
+    async def post(self, request, entry_id: str, chargepoint_id: str, event: str):
+        hass = request.app["hass"]
+        entry = hass.config_entries.async_get_entry(entry_id)
+        if not entry or not _auth_ok(request, entry):
+            return Response(status=401)
+
+        coordinator = _get_coordinator_for_entry(hass, entry_id)
+        if not coordinator:
+            return Response(status=503)
+
         try:
-            status = ChargePointStatus.model_validate(data)
-            target_coordinator.data["status"][cp_id] = status
-            _LOGGER.debug("Updated status via heartbeat for %s", cp_id)
-        except Exception as exc:
-            _LOGGER.error("Error validating heartbeat webhook: %s", exc)
-    
-    # MeterValue callback
-    elif "meterValueList" in data:
-        for mv in data["meterValueList"]:
-            conn_id = mv.get("connectorId")
-            total_kwh = mv.get("totalConsumptionKWh")
-            status = target_coordinator.data["status"].get(cp_id)
-            if status:
-                new_statuses = []
-                for conn_status in status.connector_statuses:
-                    if conn_status.connector_id == conn_id:
-                        new_conn_status = conn_status.model_copy(update={
-                            "total_consumption_kwh": total_kwh or conn_status.total_consumption_kwh,
-                            "measurements": mv.get("measurements") or conn_status.measurements,
-                        })
-                        new_statuses.append(new_conn_status)
-                    else:
-                        new_statuses.append(conn_status)
-                
-                target_coordinator.data["status"][cp_id] = status.model_copy(update={
-                    "connector_statuses": new_statuses
-                })
-        _LOGGER.debug("Updated measurements via metervalue for %s", cp_id)
+            data = await request.json()
+        except Exception:
+            _LOGGER.error("Charge Amps callback: invalid JSON for event '%s'", event)
+            return Response(status=400)
 
-    target_coordinator.async_set_updated_data(target_coordinator.data)
-    return None
+        _LOGGER.debug("Charge Amps callback: event=%s chargepoint=%s", event, chargepoint_id)
+
+        if event == "boot":
+            await coordinator.async_request_refresh()
+
+        elif event == "heartbeat":
+            try:
+                status = ChargePointStatus.model_validate(data)
+                coordinator.data["status"][chargepoint_id] = status
+                coordinator.async_set_updated_data(coordinator.data)
+            except Exception as exc:
+                _LOGGER.error("Heartbeat parse error: %s", exc)
+                return Response(status=422)
+
+        elif event == "metervalue":
+            for mv in data.get("meterValueList", []):
+                conn_id = mv.get("connectorId")
+                total_kwh = mv.get("totalConsumptionKWh")
+                status = coordinator.data["status"].get(chargepoint_id)
+                if not status:
+                    continue
+                new_statuses = [
+                    cs.model_copy(update={
+                        "total_consumption_kwh": total_kwh or cs.total_consumption_kwh,
+                        "measurements": mv.get("measurements") or cs.measurements,
+                    }) if cs.connector_id == conn_id else cs
+                    for cs in status.connector_statuses
+                ]
+                coordinator.data["status"][chargepoint_id] = status.model_copy(
+                    update={"connector_statuses": new_statuses}
+                )
+            coordinator.async_set_updated_data(coordinator.data)
+
+        return Response(status=200)
+
+
+class ChargeAmpsConnectorCallbackView(HomeAssistantView):
+    """Handle connector Start / Stop callbacks from Charge Amps."""
+
+    url = "/api/chargeamps/{entry_id}/chargepoints/{chargepoint_id}/connectors/{connector_id}/{event}"
+    name = "api:chargeamps:connector_callback"
+    requires_auth = False
+
+    async def post(
+        self, request, entry_id: str, chargepoint_id: str, connector_id: str, event: str
+    ):
+        hass = request.app["hass"]
+        entry = hass.config_entries.async_get_entry(entry_id)
+        if not entry or not _auth_ok(request, entry):
+            return Response(status=401)
+
+        coordinator = _get_coordinator_for_entry(hass, entry_id)
+        if not coordinator:
+            return Response(status=503)
+
+        _LOGGER.debug(
+            "Charge Amps callback: event=%s chargepoint=%s connector=%s",
+            event, chargepoint_id, connector_id,
+        )
+
+        # Trigger a full refresh so the new session data is fetched from the API
+        await coordinator.async_request_refresh()
+        return Response(status=200)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        webhook_id = f"{DOMAIN}_{entry.entry_id}"
-        webhook.async_unregister(hass, webhook_id)
-        coordinator = hass.data[DOMAIN].pop(entry.entry_id)
-
+        hass.data[DOMAIN].pop(entry.entry_id, None)
     return unload_ok
 
 

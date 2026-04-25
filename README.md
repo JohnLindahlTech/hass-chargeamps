@@ -38,10 +38,34 @@ The integration provides standard Home Assistant entities for full control and m
 - **Numbers**: Set the maximum current limit (A) directly from the UI.
 - **Buttons**: Remotely reboot the charge point hardware.
 
-### Real-time Updates (Optional Webhooks)
-For instant updates when charging starts or stops, you can configure webhooks:
-1. After setup, check your Home Assistant logs for your unique `webhook_id`.
-2. Configure the following URL in your Charge Amps portal: `https://<your-ha-url>/api/webhook/<webhook_id>`.
+### Real-time Updates (Optional Callbacks)
+By default the integration polls the Charge Amps API every 30 seconds. For instant updates when charging starts, stops, or the charger sends a heartbeat, you can ask Charge Amps to push events directly to your Home Assistant instance.
+
+> **Note:** This requires your Home Assistant to be reachable from the internet (e.g. via [Nabu Casa / Home Assistant Cloud](https://www.nabucasa.com/) or your own reverse proxy). It also requires contacting Charge Amps support — it is not self-service.
+
+#### Step 1 — Find your callback credentials
+
+When the integration is first set up, a **persistent notification** appears in the Home Assistant UI titled **"Charge Amps Webhook Credentials"**. It contains the three things you need to give Charge Amps support:
+
+| Field | Example |
+|---|---|
+| **Base URL** | `https://your-ha.duckdns.org/api/chargeamps/<entry_id>` |
+| **Auth header key** | `x-api-key` |
+| **Auth header value** | `a3f8...` (auto-generated token) |
+
+Dismiss the notification once you have noted the details. The same information is always available under **Settings → Devices & Services → Chargeamps → Download diagnostics** in the `webhook` section.
+
+#### Step 2 — Contact Charge Amps support
+
+Email Charge Amps support and ask them to configure callbacks for your charge point. Provide the three values above. Charge Amps will then POST events to your Home Assistant on each of the following:
+
+| Event | Trigger |
+|---|---|
+| `boot` | Charge point rebooted |
+| `heartbeat` | Status update every ~30 s (idle only) |
+| `metervalue` | Power/energy reading every ~30 s (charging only) |
+| `Start` | Charging session started |
+| `Stop` | Charging session ended |
 
 ### Hardware Support
 Includes specific naming and icons for:
@@ -50,7 +74,7 @@ Includes specific naming and icons for:
 - **Halo** (including specific **Schuko** socket support).
 
 ## Diagnostics
-If you encounter issues, you can download a redacted diagnostics file from the integration page to help with troubleshooting.
+Go to **Settings → Devices & Services → Chargeamps → Download diagnostics** to get a file useful for troubleshooting. Sensitive credentials (email, password, API key) are redacted. The callback base URL, auth header key, and webhook token are included in plain text so you can retrieve them if needed.
 
 ## Services
 The integration also supports legacy services for advanced automations (see `services.yaml` for details).

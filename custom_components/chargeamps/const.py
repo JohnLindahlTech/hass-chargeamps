@@ -5,7 +5,7 @@ from datetime import timedelta
 # Base component constants
 DOMAIN = "chargeamps"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "1.12.3"
+VERSION = "1.13.0"
 PLATFORMS = ["sensor", "switch", "light", "button", "lock", "number", "binary_sensor"]
 ISSUE_URL = "https://github.com/JohnLindahlTech/hass-chargeamps/issues"
 CONFIGURATION_URL = "https://my.charge.space"
@@ -43,6 +43,10 @@ ICON_MAP = {
 # Configuration
 CONF_CHARGEPOINTS = "chargepoints"
 CONF_READONLY = "readonly"
+CONF_WEBHOOK_SECRET = "webhook_secret"
+
+# Webhook
+WEBHOOK_AUTH_HEADER = "x-api-key"
 
 # Defaults
 DEFAULT_NAME = DOMAIN
