@@ -88,6 +88,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     # Register HTTP views once — they route by entry_id internally
     if not hass.data[DOMAIN].get(_VIEWS_REGISTERED):
+        hass.http.register_view(ChargeAmpsHealthView())
         hass.http.register_view(ChargeAmpsCallbackView())
         hass.http.register_view(ChargeAmpsConnectorCallbackView())
         hass.data[DOMAIN][_VIEWS_REGISTERED] = True
@@ -116,6 +117,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                 f"| **Base URL** | `{webhook_base}` |\n"
                 f"| **Auth header key** | `{WEBHOOK_AUTH_HEADER}` |\n"
                 f"| **Auth header value** | `{secret}` |\n\n"
+                f"**Verify reachability first** — run this from a terminal outside your home network "
+                f"(or use a tool like [reqbin.com](https://reqbin.com)):\n\n"
+                f"```\nGET {webhook_base}\n{WEBHOOK_AUTH_HEADER}: {secret}\n```\n\n"
+                f"- `200 OK` → ready to hand to Charge Amps support\n"
+                f"- `401` → URL correct but secret wrong\n"
+                f"- `404` → URL unreachable or wrong\n\n"
                 f"You can dismiss this notification once you have noted the details. "
                 f"The information is also available under **integration diagnostics**."
             ),
@@ -251,6 +258,21 @@ def _auth_ok(request, entry) -> bool:
     """Validate the x-api-key header against the stored webhook secret."""
     expected = entry.data.get(CONF_WEBHOOK_SECRET)
     return expected and request.headers.get(WEBHOOK_AUTH_HEADER) == expected
+
+
+class ChargeAmpsHealthView(HomeAssistantView):
+    """Health-check endpoint — GET /api/chargeamps/{entry_id} returns 200 OK."""
+
+    url = "/api/chargeamps/{entry_id}"
+    name = "api:chargeamps:health"
+    requires_auth = False
+
+    async def get(self, request, entry_id: str):
+        hass = request.app["hass"]
+        entry = hass.config_entries.async_get_entry(entry_id)
+        if not entry or not _auth_ok(request, entry):
+            return Response(status=401)
+        return Response(status=200)
 
 
 class ChargeAmpsCallbackView(HomeAssistantView):

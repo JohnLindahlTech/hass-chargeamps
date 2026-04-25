@@ -55,7 +55,21 @@ When the integration is first set up, a **persistent notification** appears in t
 
 Dismiss the notification once you have noted the details. The same information is always available under **Settings → Devices & Services → Chargeamps → Download diagnostics** in the `webhook` section.
 
-#### Step 2 — Contact Charge Amps support
+#### Step 2 — Verify reachability
+
+Before contacting support, confirm your setup works with a quick `curl`:
+
+```bash
+curl -i -H "x-api-key: <your-secret>" https://<your-ha-url>/api/chargeamps/<entry_id>
+```
+
+| Response | Meaning |
+|---|---|
+| `200 OK` | URL and secret are correct — ready to hand to Charge Amps |
+| `401 Unauthorized` | URL is correct but secret is wrong |
+| `404 Not Found` | URL is wrong (typo, wrong entry_id, or HA not reachable externally) |
+
+#### Step 3 — Contact Charge Amps support
 
 Email Charge Amps support and ask them to configure callbacks for your charge point. Provide the three values above. Charge Amps will then POST events to your Home Assistant on each of the following:
 
