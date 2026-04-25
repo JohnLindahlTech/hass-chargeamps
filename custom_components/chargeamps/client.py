@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 
 import jwt
 from aiohttp import ClientResponse, ClientSession
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 API_BASE_URL = "https://eapi.charge.space"
@@ -61,6 +61,13 @@ class ChargePointConnectorStatus(ChargeAmpsBaseModel):
     start_time: datetime | None = None
     end_time: datetime | None = None
     session_id: str | None = None
+
+    @field_validator("session_id", mode="before")
+    @classmethod
+    def coerce_session_id(cls, v: object) -> str | None:
+        if v is None:
+            return None
+        return str(v)
 
 
 class ChargePointStatus(ChargeAmpsBaseModel):
