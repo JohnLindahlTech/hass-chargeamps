@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.diagnostics import redact_datacyclic
+from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY, CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
@@ -12,10 +12,7 @@ from homeassistant.helpers.network import NoURLAvailableError, get_url
 
 from .const import CONF_WEBHOOK_SECRET, DOMAIN, WEBHOOK_AUTH_HEADER
 
-# webhook_secret is intentionally NOT redacted — it is an inbound-only token
-# that lets Charge Amps authenticate callbacks to HA. It does not grant access
-# to the Charge Amps API or the user's account.
-REDACT_KEYS = {CONF_API_KEY, CONF_EMAIL, CONF_PASSWORD, "password", "rfid"}
+REDACT_KEYS = {CONF_API_KEY, CONF_EMAIL, CONF_PASSWORD, CONF_WEBHOOK_SECRET, "password", "rfid"}
 
 
 async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
@@ -31,13 +28,13 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: ConfigE
     return {
         "entry": {
             "title": entry.title,
-            "data": redact_datacyclic(entry.data, REDACT_KEYS),
-            "options": redact_datacyclic(entry.options, REDACT_KEYS),
+            "data": async_redact_data(entry.data, REDACT_KEYS),
+            "options": async_redact_data(entry.options, REDACT_KEYS),
         },
         "webhook": {
             "base_url": webhook_base,
             "auth_header_key": WEBHOOK_AUTH_HEADER,
-            "auth_header_value": entry.data.get(CONF_WEBHOOK_SECRET, "not yet generated"),
+            "auth_header_value": "<redacted>" if entry.data.get(CONF_WEBHOOK_SECRET) else "not yet generated",
         },
-        "data": redact_datacyclic(coordinator.data, REDACT_KEYS),
+        "data": async_redact_data(coordinator.data, REDACT_KEYS),
     }

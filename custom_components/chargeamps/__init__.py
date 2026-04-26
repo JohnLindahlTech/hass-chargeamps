@@ -135,9 +135,11 @@ def setup_services(hass: HomeAssistant) -> None:
 
     async def get_coordinator(chargepoint_id: str) -> Optional[ChargeAmpsDataUpdateCoordinator]:
         """Find the coordinator matching a charge point ID."""
-        for coordinator in hass.data[DOMAIN].values():
-            if chargepoint_id in coordinator.data["chargepoints"]:
-                return coordinator
+        for value in hass.data[DOMAIN].values():
+            if not isinstance(value, ChargeAmpsDataUpdateCoordinator):
+                continue
+            if chargepoint_id in value.data["chargepoints"]:
+                return value
         return None
 
     async def async_set_max_current(call: ServiceCall):

@@ -160,7 +160,9 @@ class ChargeampsConnectorSensor(ChargeAmpsEntity, SensorEntity):
                     if conn_status.measurements:
                         for m in conn_status.measurements:
                             if m.phase == phase:
-                                return round(m.current, 2) if "current" in self.entity_description.key else round(m.voltage, 1)
+                                if "current" in self.entity_description.key:
+                                    return round(m.current, 2) if m.current is not None else 0.0
+                                return round(m.voltage, 1) if m.voltage is not None else 0.0
                     return 0.0
         return None
 

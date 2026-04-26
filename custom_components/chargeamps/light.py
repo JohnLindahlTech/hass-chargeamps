@@ -101,7 +101,9 @@ class ChargeampsLight(ChargeAmpsEntity, LightEntity):
         if self.entity_description.key == "dimmer":
             brightness = kwargs.get("brightness")
             if brightness is not None:
-                if brightness < 128:
+                if brightness == 0:
+                    settings.dimmer = "Off"
+                elif brightness < 128:
                     settings.dimmer = "Low"
                 elif brightness < 192:
                     settings.dimmer = "Medium"

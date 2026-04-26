@@ -114,7 +114,7 @@ class ChargeAmpsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
             else:
                 entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
-                self.hass.config_entries.async_update_entry(entry, data=user_input)
+                self.hass.config_entries.async_update_entry(entry, data={**entry.data, **user_input})
                 await self.hass.config_entries.async_reload(entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
