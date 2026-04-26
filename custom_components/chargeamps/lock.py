@@ -55,12 +55,14 @@ class ChargeampsCableLock(ChargeAmpsEntity, LockEntity):
     entity_description: ChargeampsLockEntityDescription
 
     def __init__(self, coordinator, charge_point_id, connector_id, description):
+        """Initialize the lock."""
         super().__init__(coordinator, charge_point_id, connector_id)
         self.entity_description = description
         self._attr_unique_id = f"{DOMAIN}_{charge_point_id}_{connector_id}_{description.key}"
 
     @property
     def is_locked(self) -> bool:
+        """Return true if the cable is locked."""
         settings = self.coordinator.data["connector_settings"].get(
             (self.charge_point_id, self.connector_id)
         )

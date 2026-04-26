@@ -134,12 +134,14 @@ class ChargeampsConnectorSensor(ChargeAmpsEntity, SensorEntity):
     entity_description: ChargeampsSensorEntityDescription
 
     def __init__(self, coordinator, charge_point_id, connector_id, description):
+        """Initialize the connector sensor."""
         super().__init__(coordinator, charge_point_id, connector_id)
         self.entity_description = description
         self._attr_unique_id = f"{DOMAIN}_{charge_point_id}_{connector_id}_{description.key}"
 
     @property
     def native_value(self) -> float | str | None:
+        """Return the current sensor value."""
         cp_status = self.coordinator.data["status"].get(self.charge_point_id)
         if not cp_status:
             return None
@@ -168,6 +170,7 @@ class ChargeampsConnectorSensor(ChargeAmpsEntity, SensorEntity):
 
     @property
     def icon(self) -> str | None:
+        """Return the icon for the sensor."""
         if self.entity_description.key == "status":
             if self.connector_name == "Schuko":
                 return ICON_MAP.get("Schuko", DEFAULT_ICON)
@@ -180,6 +183,7 @@ class ChargeampsConnectorSensor(ChargeAmpsEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict:
+        """Return extra state attributes."""
         attrs = {"charge_point_id": self.charge_point_id, "connector_id": self.connector_id}
         if self.entity_description.key == "status":
             cp_status = self.coordinator.data["status"].get(self.charge_point_id)
@@ -198,12 +202,14 @@ class ChargeampsChargePointSensor(ChargeAmpsEntity, SensorEntity):
     entity_description: ChargeampsSensorEntityDescription
 
     def __init__(self, coordinator, charge_point_id, description):
+        """Initialize the charge point sensor."""
         super().__init__(coordinator, charge_point_id)
         self.entity_description = description
         self._attr_unique_id = f"{DOMAIN}_{charge_point_id}_{description.key}"
 
     @property
     def native_value(self) -> float | None:
+        """Return the current sensor value."""
         if self.entity_description.key == "total_energy":
             return self.coordinator.data["total_energy"].get(self.charge_point_id)
         return None

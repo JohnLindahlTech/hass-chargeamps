@@ -62,6 +62,7 @@ class ChargeampsLight(ChargeAmpsEntity, LightEntity):
     entity_description: ChargeampsLightEntityDescription
 
     def __init__(self, coordinator, charge_point_id, description):
+        """Initialize the light."""
         super().__init__(coordinator, charge_point_id)
         self.entity_description = description
         self._attr_unique_id = f"{DOMAIN}_{charge_point_id}_{description.key}"
@@ -74,6 +75,7 @@ class ChargeampsLight(ChargeAmpsEntity, LightEntity):
 
     @property
     def is_on(self) -> bool:
+        """Return true if the light is on."""
         settings = self.coordinator.data["settings"].get(self.charge_point_id)
         if not settings:
             return False

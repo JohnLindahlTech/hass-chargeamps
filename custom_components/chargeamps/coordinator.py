@@ -64,7 +64,7 @@ class ChargeAmpsDataUpdateCoordinator(DataUpdateCoordinator):
             }
 
             async def fetch_cp_data(cp: ChargePoint):
-                # Fetch status and settings in parallel
+                """Fetch all data for a single charge point in parallel."""
                 status_task = self.client.get_chargepoint_status(cp.id)
                 settings_task = self.client.get_chargepoint_settings(cp.id)
                 

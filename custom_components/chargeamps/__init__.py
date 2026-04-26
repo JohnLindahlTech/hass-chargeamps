@@ -147,6 +147,7 @@ def setup_services(hass: HomeAssistant) -> None:
         return None
 
     async def async_set_max_current(call: ServiceCall):
+        """Set the maximum charging current for a connector."""
         cp_id = call.data["chargepoint"]
         conn_id = call.data["connector"]
         max_curr = call.data["max_current"]
@@ -161,6 +162,7 @@ def setup_services(hass: HomeAssistant) -> None:
             _LOGGER.error("Chargepoint %s not found in any configured account", cp_id)
 
     async def async_set_light(call: ServiceCall):
+        """Set the dimmer and/or downlight settings for a charge point."""
         cp_id = call.data["chargepoint"]
         dimmer = call.data.get("dimmer")
         downlight = call.data.get("downlight")
@@ -176,6 +178,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 await coordinator.async_request_refresh()
 
     async def async_enable_ev(call: ServiceCall):
+        """Enable EV charging on a connector."""
         cp_id = call.data["chargepoint"]
         conn_id = call.data["connector"]
         if coordinator := await get_coordinator(cp_id):
@@ -186,6 +189,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 await coordinator.async_request_refresh()
 
     async def async_disable_ev(call: ServiceCall):
+        """Disable EV charging on a connector."""
         cp_id = call.data["chargepoint"]
         conn_id = call.data["connector"]
         if coordinator := await get_coordinator(cp_id):
@@ -196,6 +200,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 await coordinator.async_request_refresh()
 
     async def async_cable_lock(call: ServiceCall):
+        """Lock the cable on a connector."""
         cp_id = call.data["chargepoint"]
         conn_id = call.data["connector"]
         if coordinator := await get_coordinator(cp_id):
@@ -206,6 +211,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 await coordinator.async_request_refresh()
 
     async def async_cable_unlock(call: ServiceCall):
+        """Unlock the cable on a connector."""
         cp_id = call.data["chargepoint"]
         conn_id = call.data["connector"]
         if coordinator := await get_coordinator(cp_id):
@@ -216,6 +222,7 @@ def setup_services(hass: HomeAssistant) -> None:
                 await coordinator.async_request_refresh()
 
     async def async_remote_start(call: ServiceCall):
+        """Remotely start a charging session on a connector."""
         cp_id = call.data["chargepoint"]
         conn_id = call.data["connector"]
         auth = StartAuth(
@@ -229,6 +236,7 @@ def setup_services(hass: HomeAssistant) -> None:
             await coordinator.async_request_refresh()
 
     async def async_remote_stop(call: ServiceCall):
+        """Remotely stop a charging session on a connector."""
         cp_id = call.data["chargepoint"]
         conn_id = call.data["connector"]
         if coordinator := await get_coordinator(cp_id):
@@ -269,6 +277,7 @@ class ChargeAmpsHealthView(HomeAssistantView):
     requires_auth = False
 
     async def get(self, request, entry_id: str):
+        """Handle health-check GET request."""
         hass = request.app["hass"]
         entry = hass.config_entries.async_get_entry(entry_id)
         if not entry or not _auth_ok(request, entry):
@@ -284,6 +293,7 @@ class ChargeAmpsCallbackView(HomeAssistantView):
     requires_auth = False
 
     async def post(self, request, entry_id: str, chargepoint_id: str, event: str):
+        """Handle charge point event callback POST request."""
         hass = request.app["hass"]
         entry = hass.config_entries.async_get_entry(entry_id)
         if not entry or not _auth_ok(request, entry):
@@ -345,6 +355,7 @@ class ChargeAmpsConnectorCallbackView(HomeAssistantView):
     async def post(
         self, request, entry_id: str, chargepoint_id: str, connector_id: str, event: str
     ):
+        """Handle connector event callback POST request."""
         hass = request.app["hass"]
         entry = hass.config_entries.async_get_entry(entry_id)
         if not entry or not _auth_ok(request, entry):
@@ -388,6 +399,7 @@ class ChargeAmpsEntity(CoordinatorEntity[ChargeAmpsDataUpdateCoordinator]):
         charge_point_id: str,
         connector_id: Optional[int] = None,
     ):
+        """Initialize the entity."""
         super().__init__(coordinator)
         self.charge_point_id = charge_point_id
         self.connector_id = connector_id

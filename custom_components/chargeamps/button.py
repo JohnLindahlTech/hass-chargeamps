@@ -52,6 +52,7 @@ class ChargeampsButton(ChargeAmpsEntity, ButtonEntity):
     entity_description: ChargeampsButtonEntityDescription
 
     def __init__(self, coordinator, charge_point_id, description):
+        """Initialize the button."""
         super().__init__(coordinator, charge_point_id)
         self.entity_description = description
         self._attr_unique_id = f"{DOMAIN}_{charge_point_id}_{description.key}"

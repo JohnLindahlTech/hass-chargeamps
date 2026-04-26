@@ -72,6 +72,7 @@ class ChargeampsBinarySensor(ChargeAmpsEntity, BinarySensorEntity):
     entity_description: ChargeampsBinarySensorEntityDescription
 
     def __init__(self, coordinator, charge_point_id, connector_id, description):
+        """Initialize the binary sensor."""
         super().__init__(coordinator, charge_point_id, connector_id)
         self.entity_description = description
         self._attr_unique_id = f"{DOMAIN}_{charge_point_id}_{connector_id}_{description.key}"

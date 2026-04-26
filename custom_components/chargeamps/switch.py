@@ -53,12 +53,14 @@ class ChargeampsSwitch(ChargeAmpsEntity, SwitchEntity):
     entity_description: ChargeampsSwitchEntityDescription
 
     def __init__(self, coordinator, charge_point_id, connector_id, description):
+        """Initialize the switch."""
         super().__init__(coordinator, charge_point_id, connector_id)
         self.entity_description = description
         self._attr_unique_id = f"{DOMAIN}_{charge_point_id}_{connector_id}_{description.key}"
 
     @property
     def is_on(self) -> bool:
+        """Return true if charging is enabled."""
         settings = self.coordinator.data["connector_settings"].get(
             (self.charge_point_id, self.connector_id)
         )
@@ -86,6 +88,7 @@ class ChargeampsSwitch(ChargeAmpsEntity, SwitchEntity):
 
     @property
     def extra_state_attributes(self) -> dict:
+        """Return extra state attributes."""
         attrs = {"charge_point_id": self.charge_point_id, "connector_id": self.connector_id}
         settings = self.coordinator.data["connector_settings"].get(
             (self.charge_point_id, self.connector_id)

@@ -60,12 +60,14 @@ class ChargeampsNumber(ChargeAmpsEntity, NumberEntity):
     entity_description: ChargeampsNumberEntityDescription
 
     def __init__(self, coordinator, charge_point_id, connector_id, description):
+        """Initialize the number entity."""
         super().__init__(coordinator, charge_point_id, connector_id)
         self.entity_description = description
         self._attr_unique_id = f"{DOMAIN}_{charge_point_id}_{connector_id}_{description.key}"
 
     @property
     def native_value(self) -> float:
+        """Return the current maximum current setting."""
         settings = self.coordinator.data["connector_settings"].get(
             (self.charge_point_id, self.connector_id)
         )
