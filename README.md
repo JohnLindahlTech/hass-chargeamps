@@ -4,7 +4,7 @@ This repository contains a [Charge Amps](https://www.chargeamps.com/) component 
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 
-This is a personal fork by [JohnLindahlTech](https://github.com/JohnLindahlTech), based on the original work at [kirei/hass-chargeamps](https://github.com/kirei/hass-chargeamps). It is not supported by [Charge Amps AB](https://chargeamps.com).
+Maintained by [JohnLindahlTech](https://github.com/JohnLindahlTech), based on the original work at [kirei/hass-chargeamps](https://github.com/kirei/hass-chargeamps). It is not supported by [Charge Amps AB](https://chargeamps.com).
 
 ## Installation
 

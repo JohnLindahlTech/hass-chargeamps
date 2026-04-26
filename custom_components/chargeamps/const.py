@@ -7,7 +7,7 @@ DOMAIN = "chargeamps"
 DOMAIN_DATA = f"{DOMAIN}_data"
 VERSION = "1.13.0"
 PLATFORMS = ["sensor", "switch", "light", "button", "lock", "number", "binary_sensor"]
-ISSUE_URL = "https://github.com/JohnLindahlTech/hass-chargeamps/issues"
+ISSUE_URL = "https://github.com/hass-chargeamps/hass-chargeamps/issues"
 CONFIGURATION_URL = "https://my.charge.space"
 MANUFACTURER = "Charge Amps AB"
 
