@@ -13,9 +13,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .client import (
     ChargeAmpsClient,
     ChargePoint,
-    ChargePointConnectorSettings,
-    ChargePointConnectorStatus,
-    ChargePointSettings,
 )
 from .const import DOMAIN
 

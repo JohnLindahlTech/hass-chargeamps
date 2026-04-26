@@ -10,7 +10,6 @@ from homeassistant.components.light import (
     ColorMode,
     LightEntity,
     LightEntityDescription,
-    filter_supported_color_modes,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -46,7 +45,7 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][entry.entry_id]
     entities = []
 
-    for cp_id, cp in coordinator.data["chargepoints"].items():
+    for cp_id, _cp in coordinator.data["chargepoints"].items():
         cp_settings = coordinator.data["settings"].get(cp_id)
         if cp_settings:
             if cp_settings.dimmer is not None:

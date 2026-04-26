@@ -84,7 +84,6 @@ class ChargeampsBinarySensor(ChargeAmpsEntity, BinarySensorEntity):
             return False
 
         for conn_status in cp_status.connector_statuses:
-            if conn_status.connector_id == self.connector_id:
-                if self.entity_description.key == "cable_connected":
-                    return str(conn_status.status) in CONNECTED_STATUSES
+            if conn_status.connector_id == self.connector_id and self.entity_description.key == "cable_connected":
+                return str(conn_status.status) in CONNECTED_STATUSES
         return False

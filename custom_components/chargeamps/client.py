@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 
 import jwt
 from aiohttp import ClientResponse, ClientSession
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
 API_BASE_URL = "https://eapi.charge.space"
