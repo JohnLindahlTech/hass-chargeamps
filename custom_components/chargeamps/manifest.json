@@ -1,7 +1,7 @@
 {
   "domain": "chargeamps",
   "name": "Chargeamps",
-  "codeowners": ["@JohnLindahlTech"],
+  "codeowners": ["@hass-chargeamps"],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/hass-chargeamps/hass-chargeamps",
