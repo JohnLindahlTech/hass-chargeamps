@@ -30,9 +30,11 @@ class ChargeAmpsDataUpdateCoordinator(DataUpdateCoordinator):
         hass: HomeAssistant,
         client: ChargeAmpsClient,
         update_interval: timedelta,
+        chargepoint_ids: list[str] | None = None,
     ) -> None:
         """Initialize."""
         self.client = client
+        self._chargepoint_ids = chargepoint_ids or []
         super().__init__(
             hass,
             _LOGGER,
@@ -50,7 +52,12 @@ class ChargeAmpsDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict[str, Any]:
         """Update data via library."""
         try:
-            chargepoints = await self.client.get_chargepoints()
+            all_chargepoints = await self.client.get_chargepoints()
+            chargepoints = (
+                [cp for cp in all_chargepoints if cp.id in self._chargepoint_ids]
+                if self._chargepoint_ids
+                else all_chargepoints
+            )
             data: dict[str, Any] = {
                 "chargepoints": {cp.id: cp for cp in chargepoints},
                 "status": {},

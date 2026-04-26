@@ -9,15 +9,16 @@ from homeassistant.const import (
     CONF_API_KEY,
     CONF_EMAIL,
     CONF_PASSWORD,
-    CONF_URL,
     CONF_SCAN_INTERVAL,
+    CONF_URL,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .client import ChargeAmpsClient
-from .const import DOMAIN, DEFAULT_SCAN_INTERVAL
+from .const import CONF_CHARGEPOINTS, DEFAULT_SCAN_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,6 +95,8 @@ class ChargeAmpsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         options = {}
         if CONF_SCAN_INTERVAL in import_data:
             options[CONF_SCAN_INTERVAL] = import_data.pop(CONF_SCAN_INTERVAL)
+        if CONF_CHARGEPOINTS in import_data:
+            options[CONF_CHARGEPOINTS] = import_data.pop(CONF_CHARGEPOINTS)
 
         clean_data = {
             k: v for k, v in import_data.items()
@@ -141,6 +144,14 @@ class ChargeAmpsOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
+        coordinator = self.hass.data.get(DOMAIN, {}).get(self.config_entry.entry_id)
+        chargepoints: dict[str, str] = {}
+        if coordinator and coordinator.data:
+            chargepoints = {
+                cp_id: cp.name or cp_id
+                for cp_id, cp in coordinator.data.get("chargepoints", {}).items()
+            }
+
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
@@ -151,6 +162,18 @@ class ChargeAmpsOptionsFlowHandler(config_entries.OptionsFlow):
                             CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL.total_seconds()
                         ),
                     ): vol.All(vol.Coerce(int), vol.Range(min=10, max=3600)),
+                    vol.Optional(
+                        CONF_CHARGEPOINTS,
+                        default=self.config_entry.options.get(CONF_CHARGEPOINTS, []),
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                selector.SelectOptionDict(value=cp_id, label=name)
+                                for cp_id, name in chargepoints.items()
+                            ],
+                            multiple=True,
+                        )
+                    ),
                 }
             ),
         )
