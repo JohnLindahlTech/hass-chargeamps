@@ -12,6 +12,16 @@
           "api_key": "API Key",
           "url": "API Base URL (optional)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Chargeamps",
+        "description": "Your credentials are no longer valid. Please update them below.",
+        "data": {
+          "email": "Email",
+          "password": "Password",
+          "api_key": "API Key",
+          "url": "API Base URL (optional)"
+        }
       }
     },
     "error": {

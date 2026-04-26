@@ -104,9 +104,9 @@ class ChargeAmpsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         }
         return self.async_create_entry(title=clean_data[CONF_EMAIL], data=clean_data, options=options)
 
-    async def async_step_reauth(self, user_input: dict[str, Any] | None = None) -> FlowResult:
-        """Handle re-authentication."""
-        return await self.async_step_reauth_confirm(user_input)
+    async def async_step_reauth(self, entry_data: dict[str, Any]) -> FlowResult:
+        """Handle re-authentication — show the form immediately."""
+        return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Confirm re-authentication."""
@@ -123,9 +123,12 @@ class ChargeAmpsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.hass.config_entries.async_reload(entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
 
+        entry = self.hass.config_entries.async_get_entry(self.context["entry_id"])
         return self.async_show_form(
             step_id="reauth_confirm",
-            data_schema=STEP_USER_DATA_SCHEMA,
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_USER_DATA_SCHEMA, entry.data if entry else {}
+            ),
             errors=errors,
         )
 
